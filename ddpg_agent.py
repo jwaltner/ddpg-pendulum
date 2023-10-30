@@ -22,7 +22,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
     
-    def __init__(self, state_size, action_size, random_seed):
+    def __init__(self, state_size, action_size, random_seed, 
+                 a_fc1_units=400, a_fc2_units=300,
+                 c_fc1_units=400, c_fc2_units=300
+                 ):
         """Initialize an Agent object.
         
         Params
@@ -36,13 +39,13 @@ class Agent():
         self.seed = random.seed(random_seed)
 
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, action_size, random_seed).to(device)
-        self.actor_target = Actor(state_size, action_size, random_seed).to(device)
+        self.actor_local = Actor(state_size, action_size, random_seed, fc1_units=a_fc1_units, fc2_units=a_fc2_units).to(device)
+        self.actor_target = Actor(state_size, action_size, random_seed, fc1_units=a_fc1_units, fc2_units=a_fc2_units).to(device)
         self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=LR_ACTOR)
 
         # Critic Network (w/ Target Network)
-        self.critic_local = Critic(state_size, action_size, random_seed).to(device)
-        self.critic_target = Critic(state_size, action_size, random_seed).to(device)
+        self.critic_local = Critic(state_size, action_size, random_seed, fc1_units=c_fc1_units, fc2_units=c_fc2_units).to(device)
+        self.critic_target = Critic(state_size, action_size, random_seed, fc1_units=c_fc1_units, fc2_units=c_fc2_units).to(device)
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
 
         # Noise process
@@ -61,7 +64,7 @@ class Agent():
             experiences = self.memory.sample()
             self.learn(experiences, GAMMA)
 
-    def act(self, state, add_noise=True):
+    def act(self, state, add_noise=True, noise_factor=1.0):
         """Returns actions for given state as per current policy."""
         state = torch.from_numpy(state).float().to(device)
         self.actor_local.eval()
@@ -69,7 +72,7 @@ class Agent():
             action = self.actor_local(state).cpu().data.numpy()
         self.actor_local.train()
         if add_noise:
-            action += self.noise.sample()
+            action += self.noise.sample() * noise_factor
         return np.clip(action, -1, 1)
 
     def reset(self):
